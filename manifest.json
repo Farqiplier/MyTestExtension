@@ -1,0 +1,10 @@
+{
+  "name": "Rivestream Custom",
+  "id": "rivestream.custom.provider",
+  "version": "1.0.2",
+  "description": "Rivestream Provider",
+  "author": "User",
+  "type": "streaming-provider",
+  "main": "index.js",
+  "lang": "en"
+}
