@@ -1,11 +1,11 @@
 {
   "id": "rivestream-tmdb-provider",
   "name": "Rivestream",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Senior Software Engineer",
-  "description": "Multi-source streaming provider using TMDB metadata and Rivestream embeds.",
-  "type": "streaming-provider",
-  "main": "index.js",
+  "description": "TMDB & Rivestream streaming provider.",
+  "type": "onlinestream-provider",
+  "language": "javascript",
   "lang": "en",
-  "icon": "https://rivestream.org/favicon.ico"
+  "payload": "class Provider {\n  constructor() {\n    this.apiKey = '963152cd5dd145cfa7496a5e975139e9';\n    this.apiUrl = 'https://api.themoviedb.org/3';\n  }\n\n  getSettings() {\n    return {\n      episodeServers: ['Rivestream'],\n      supportsDub: false\n    };\n  }\n\n  async getMediaInfo(mediaId) {\n    let id = '';\n    let type = 'tv';\n    if (typeof mediaId === 'object' && mediaId !== null) {\n      id = String(mediaId.tmdbId || mediaId.id);\n      type = (mediaId.type || 'tv').toLowerCase();\n    } else {\n      id = String(mediaId);\n      try {\n        const check = await fetch(`${this.apiUrl}/movie/${id}?api_key=${this.apiKey}`).then(res => res.json());\n        type = check.success === false ? 'tv' : 'movie';\n      } catch (e) {\n        type = 'tv';\n      }\n    }\n    return { id, type };\n  }\n\n  async findEpisodes(mediaId) {\n    const { id, type } = await this.getMediaInfo(mediaId);\n    const episodes = [];\n    if (type === 'movie') {\n      episodes.push({\n        id: `${id}|movie`,\n        number: 1,\n        title: 'Full Movie'\n      });\n    } else {\n      const tvRes = await fetch(`${this.apiUrl}/tv/${id}?api_key=${this.apiKey}`).then(res => res.json());\n      if (!tvRes.seasons) return [];\n      for (const season of tvRes.seasons) {\n        if (season.season_number === 0) continue;\n        const sRes = await fetch(`${this.apiUrl}/tv/${id}/season/${season.season_number}?api_key=${this.apiKey}`).then(res => res.json());\n        if (sRes.episodes) {\n          for (const ep of sRes.episodes) {\n            episodes.push({\n              id: `${id}|tv|${ep.season_number}|${ep.episode_number}`,\n              number: episodes.length + 1,\n              title: `S${ep.season_number}E${ep.episode_number} - ${ep.name}`\n            });\n          }\n        }\n      }\n    }\n    return episodes;\n  }\n\n  async findEpisodeServer(episode, server) {\n    const parts = episode.id.split('|');\n    const tmdbId = parts[0];\n    const type = parts[1];\n    let embedUrl = '';\n    if (type === 'movie') {\n      embedUrl = `https://rivestream.org/embed?id=${tmdbId}&type=movie`;\n    } else {\n      const season = parts[2];\n      const epNum = parts[3];\n      embedUrl = `https://rivestream.org/embed?id=${tmdbId}&type=tv&season=${season}&episode=${epNum}`;\n    }\n    return {\n      server: 'Rivestream',\n      videoSources: [{\n        url: embedUrl,\n        quality: 'auto',\n        type: 'iframe'\n      }]\n    };\n  }\n}\n\nnew Provider();"
 }
